@@ -10,3 +10,16 @@
 // });
 
 // export default mongoose.model("Flower", flowerSchema);
+
+const mongoose = require("mongoose");
+
+const flowerSchema = new mongoose.Schema({
+  category: String,
+  name: String,
+  price: Number,
+  image: [String],
+  stock: Number,
+});
+
+const Flower = mongoose.model("Flower", flowerSchema);
+module.exports = Flower;
