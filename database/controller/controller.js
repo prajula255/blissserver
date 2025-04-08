@@ -48,48 +48,6 @@ exports.loginUser = async (req, res) => {
   }
 };
 
-// exports.loginUser = async (req, res) => {
-//   try {
-//       const { loginEmail, loginPassword } = req.body;
-
-//       if (!loginEmail || !loginPassword) {
-//           return res.status(400).json({ message: "Please fill in all fields." });
-//       }
-
-//       const user = await User.findOne({ email: loginEmail });
-//       if (!user) {
-//           return res.status(404).json({ message: "User not found. Please register first." });
-//       }
-
-//       const isMatch = await bcrypt.compare(loginPassword, user.password);
-//       if (!isMatch) {
-//           return res.status(401).json({ message: "Invalid email or password." });
-//       }
-
-//       // Generate JWT Token
-//       const token = jwt.sign(
-//           { id: user._id, email: user.email, role: user.role }, // Include role in token
-//           process.env.JWT_SECRET || "default_secret_key",
-//           { expiresIn: "7d" }
-//       );
-
-//       // Send response
-//       res.status(200).json({
-//           message: "Login successful!",
-//           user: {
-//               id: user._id,
-//               name: user.name,
-//               email: user.email,
-//               role: user.role, // Include role in response
-//           },
-//           token,
-//       });
-
-//   } catch (error) {
-//       console.error("Login Error:", error);
-//       res.status(500).json({ message: "Server error. Please try again later." });
-//   }
-// };
 
 exports.registerUser = async (req, res) => {
   try {
@@ -129,15 +87,19 @@ exports.registerUser = async (req, res) => {
 // wishlist
 exports.addToWishlist = async (req, res) => {
   try {
-    const { name, image, price } = req.body;
+    const { userId,flowerId,name, image, price } = req.body;
+    console.log(req.body);
+    
+    // const userId = req.userId;
 
-    const existingItem = await Wishlist.findOne({ _id });
+    // Check if the item already exists for this user
+    const existingItem = await Wishlist.findOne({ name,  userId });
 
     if (existingItem) {
       return res.status(400).json({ message: "Item already in wishlist." });
     }
 
-    const newItem = new Wishlist({ name, image, price });
+    const newItem = new Wishlist({ name, image, price,  userId ,flowerId});
     await newItem.save();
 
     res.status(201).json({ message: "Added to wishlist.", item: newItem });
@@ -149,19 +111,20 @@ exports.addToWishlist = async (req, res) => {
 
 exports.getWishlist = async (req, res) => {
   try {
-    const wishlist = await Wishlist.find();
+    const userId = req.userId;
+    const wishlist = await Wishlist.find({ user: userId });
     res.status(200).json(wishlist);
   } catch (error) {
     console.error("Fetch Wishlist Error:", error);
     res.status(500).json({ message: "Server error." });
   }
 };
-
 exports.removeFromWishlist = async (req, res) => {
   try {
-    const { id } = req.params; // Get the ID from the URL parameters
+    const { id } = req.params;
+    const userId = req.userId;
 
-    const deletedItem = await Wishlist.findByIdAndDelete(id); // Use findByIdAndDelete
+    const deletedItem = await Wishlist.findOneAndDelete({ _id: id, user: userId });
 
     if (!deletedItem) {
       return res.status(404).json({ message: "Item not found in wishlist." });
@@ -261,7 +224,7 @@ exports.placeOrder = async (req, res) => {
       cartItems,
       totalAmount, // Fixed totalAmount calculation
       deliveryDate,
-      status: "Pending", // ✅ Add status field
+      status: "Pending", //  Add status field
     });
 
     await newOrder.save();
@@ -363,10 +326,131 @@ exports.getFlower=async (req,res)=>{
 
   }
 }
-exports.updateFlower=async(req,res)=>{
+
+exports.updateFlower = async (req, res) => {
+  const { id } = req.params;
+  const { stock } = req.body;
+
   try {
-    
+    // Get the current flower
+    const flower = await Flower.findById(id);
+
+    if (!flower) {
+      return res.status(404).json({ message: "Flower not found" });
+    }
+
+    // Add new stock to existing stock
+    const updatedStock = flower.stock + parseInt(stock);
+
+    // Update the flower with new stock
+    flower.stock = updatedStock;
+    await flower.save();
+
+    res.status(200).json({
+      message: "Stock updated successfully",
+      flower,
+    });
   } catch (error) {
-    
+    console.error("Error updating stock:", error);
+    res.status(500).json({ message: "Server error while updating stock" });
   }
-}
+};
+
+exports.deleteFlower = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const deletedFlower = await Flower.findByIdAndDelete(id);
+
+    if (!deletedFlower) {
+      return res.status(404).json({ message: "Flower not found" });
+    }
+
+    res.status(200).json({ message: "Flower deleted successfully", deletedFlower });
+  } catch (error) {
+    console.error("Error deleting flower:", error);
+    res.status(500).json({ message: "Server error while deleting flower" });
+  }
+};
+
+
+exports.addToCart = async (req, res) => {
+  const userId = req.userId;
+  const { id, name, price, quantity, image } = req.body;
+
+  try {
+    const existing = await Cart.findOne({ userId, productId: id });
+
+    if (existing) {
+      existing.quantity += quantity;
+      await existing.save();
+      return res.status(200).json({ message: "Cart updated", cartItem: existing });
+    }
+
+    const newItem = new Cart({
+      userId,
+      productId: id,
+      name,
+      price,
+      image,
+      quantity,
+    });
+
+    await newItem.save();
+    res.status(201).json({ message: "Added to cart", cartItem: newItem });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to add to cart", error });
+  }
+};
+
+// Get cart items
+exports.getCart = async (req, res) => {
+  const userId = req.userId;
+  try {
+    const items = await Cart.find({ userId });
+
+    const itemsWithStock = await Promise.all(items.map(async (item) => {
+      const flower = await Flower.findById(item.productId);
+      return {
+        ...item._doc,
+        stock: flower?.stock || 0,
+      };
+    }));
+
+    res.status(200).json(itemsWithStock);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch cart", error });
+  }
+};
+
+// Update quantity
+exports.updateCartItem = async (req, res) => {
+  const { id } = req.params;
+  const { quantity } = req.body;
+
+  try {
+    const item = await Cart.findById(id);
+    if (!item) return res.status(404).json({ message: "Item not found" });
+
+    item.quantity = quantity;
+    await item.save();
+
+    res.status(200).json({ message: "Quantity updated", item });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to update quantity", error });
+  }
+};
+
+// Remove item
+exports.removeCartItem = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const deleted = await Cart.findByIdAndDelete(id);
+    if (!deleted) return res.status(404).json({ message: "Item not found" });
+
+    res.status(200).json({ message: "Item removed" });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to remove item", error });
+  }
+};

@@ -21,41 +21,7 @@ const userSchema = new mongoose.Schema(
             type: String,
             required: [true, "Password is required"],
         },
-        // phone: {
-        //     type: String, // String to support country codes
-        //     match: [/^\d{10,15}$/, "Please enter a valid phone number"]
-        // },
-        // address: {
-        //     street: { type: String },
-        //     state: { type: String },
-        //     pinCode: { type: String, match: [/^\d{5,10}$/, "Enter a valid postal code"] },
-        // },
-        // role: {
-        //     type: String,
-        //     default: "user",
-        // },
-        // isActive: {
-        //     type: Boolean,
-        //     default: true,
-        // },
-        // wishlist: [{
-        //     type: mongoose.Schema.Types.ObjectId,
-        //     ref: "Product"
-        // }],
-        // cart: [{
-        //     productId: {
-        //         type: mongoose.Schema.Types.ObjectId,
-        //         ref: "Product"
-        //     },
-        //     quantity: {
-        //         type: Number,
-        //         default: 1
-        //     }
-        // }],
-        // orders: [{
-        //     type: mongoose.Schema.Types.ObjectId,
-        //     ref: "Order"
-        // }]
+        
     },
     { timestamps: true } // Automatically adds createdAt and updatedAt fields
 );
