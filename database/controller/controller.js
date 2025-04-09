@@ -437,3 +437,53 @@ exports.removeCartItem = async (req, res) => {
     res.status(500).json({ message: "Failed to remove item", error });
   }
 };
+
+exports.logoutUser = async (req, res) => {
+  try {
+    // Nothing to invalidate since you’re using JWT stored in localStorage
+    return res
+      .status(200)
+      .json({ message: "Logged out successfully (client-only token removal)" });
+  } catch (error) {
+    console.error("Logout error:", error);
+    return res.status(500).json({ message: "Logout failed" });
+  }
+};
+
+// admin
+exports.loginAdmin = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const admin = await Admin.findOne({ email });
+    if (!admin) return res.status(401).json({ message: "Invalid credentials" });
+
+    const isMatch = await bcrypt.compare(password, admin.password);
+    if (!isMatch)
+      return res.status(401).json({ message: "Invalid credentials" });
+
+    const token = jwt.sign(
+      { id: admin._id, role: "admin" },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: "1d",
+      }
+    );
+
+    res.status(200).json({ token, adminId: admin._id });
+  } catch (err) {
+    res.status(500).json({ message: "Login failed", err });
+  }
+};
+
+// clearing cart after ordering
+exports.clearCart = async (req, res) => {
+  const { userId } = req.body;
+
+  try {
+    await Cart.deleteMany({ userId }); // Only delete cart items for logged-in user
+    return res.status(200).json({ message: "Cart cleared successfully." });
+  } catch (error) {
+    console.error("Error clearing cart:", error);
+    return res.status(500).json({ message: "Failed to clear cart." });
+  }
+};

@@ -17,6 +17,9 @@ const {
   updateCartItem,
   removeCartItem,
   addToCart,
+  logoutUser,
+  loginAdmin,
+  clearCart,
 } = require("../database/controller/controller");
 const multerAddFlowerConfig = require("../database/middleware/multerMiddleWare");
 const { verifyToken } = require("../database/middleware/authMiddleWare");
@@ -42,4 +45,9 @@ router.post("/cart", verifyToken, addToCart);
 router.get("/cart", verifyToken, getCart);
 router.put("/cart/:id", verifyToken, updateCartItem);
 router.delete("/cart/:id", verifyToken, removeCartItem);
+
+router.post("/admin-login", loginAdmin);
+
+router.post("/logout",logoutUser)
+router.delete("/clearcart",clearCart)
 module.exports = router;
