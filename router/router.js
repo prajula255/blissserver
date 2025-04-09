@@ -14,9 +14,9 @@ const {
   updateFlower,
   deleteFlower,
   getCart,
-  addToCart,
   updateCartItem,
   removeCartItem,
+  addToCart,
 } = require("../database/controller/controller");
 const multerAddFlowerConfig = require("../database/middleware/multerMiddleWare");
 const { verifyToken } = require("../database/middleware/authMiddleWare");
@@ -32,10 +32,12 @@ router.post("/placeorder", placeOrder);
 router.get("/allorder", getAllOrders);
 router.get("/order/:id", getOrderById);
 router.delete("/order/:id", deleteOrder);
+
 router.post("/addflower", multerAddFlowerConfig.array("images", 1), addFlower);
 router.get("/getFlowers", getFlower);
 router.put("/updateFlowers/:id", updateFlower);
-router.delete("/deleteFlower/:id",  deleteFlower);
+router.delete("/deleteFlower/:id", deleteFlower);
+
 router.post("/cart", verifyToken, addToCart);
 router.get("/cart", verifyToken, getCart);
 router.put("/cart/:id", verifyToken, updateCartItem);

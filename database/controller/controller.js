@@ -48,7 +48,6 @@ exports.loginUser = async (req, res) => {
   }
 };
 
-
 exports.registerUser = async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -87,19 +86,19 @@ exports.registerUser = async (req, res) => {
 // wishlist
 exports.addToWishlist = async (req, res) => {
   try {
-    const { userId,flowerId,name, image, price } = req.body;
+    const { userId, flowerId, name, image, price } = req.body;
     console.log(req.body);
-    
+
     // const userId = req.userId;
 
     // Check if the item already exists for this user
-    const existingItem = await Wishlist.findOne({ name,  userId });
+    const existingItem = await Wishlist.findOne({ name, userId });
 
     if (existingItem) {
       return res.status(400).json({ message: "Item already in wishlist." });
     }
 
-    const newItem = new Wishlist({ name, image, price,  userId ,flowerId});
+    const newItem = new Wishlist({ name, image, price, userId, flowerId });
     await newItem.save();
 
     res.status(201).json({ message: "Added to wishlist.", item: newItem });
@@ -124,7 +123,10 @@ exports.removeFromWishlist = async (req, res) => {
     const { id } = req.params;
     const userId = req.userId;
 
-    const deletedItem = await Wishlist.findOneAndDelete({ _id: id, user: userId });
+    const deletedItem = await Wishlist.findOneAndDelete({
+      _id: id,
+      user: userId,
+    });
 
     if (!deletedItem) {
       return res.status(404).json({ message: "Item not found in wishlist." });
@@ -136,37 +138,8 @@ exports.removeFromWishlist = async (req, res) => {
     res.status(500).json({ message: "Server error." });
   }
 };
+
 // orders
-// exports.placeOrder = async (req, res) => {
-//     try {
-//       console.log("Request Body:", req.body); // Log incoming request data
-
-//       const { name, email, phone, street, state, pincode, paymentMethod, cartItems } = req.body;
-
-//       if (!name || !email || !phone || !street || !state || !pincode || !paymentMethod || !cartItems || cartItems.length === 0) {
-//         return res.status(400).json({ message: "All fields are required." });
-//       }
-
-//       const newOrder = new Order({
-//         name,
-//         email,
-//         phone,
-//         street,
-//         state,
-//         pincode,
-//         paymentMethod,
-//         cartItems,
-//       });
-
-//       await newOrder.save();
-//       res.status(201).json({ message: "Order placed successfully!", order: newOrder });
-
-//     } catch (error) {
-//       console.error("Order Placement Error:", error);
-//       res.status(500).json({ message: "Server error while placing order.", error: error.message });
-//     }
-//   };
-
 exports.placeOrder = async (req, res) => {
   try {
     console.log("Request Body:", req.body);
@@ -282,11 +255,12 @@ exports.deleteOrder = async (req, res) => {
   }
 };
 
+// from admin flowers added,updated and deleted
 exports.addFlower = async (req, res) => {
   const formData = req.body;
   const images = req.files;
-  console.log("images",req.files);
-  console.log("body",req.body);
+  console.log("images", req.files);
+  console.log("body", req.body);
 
   try {
     if (images && formData) {
@@ -302,8 +276,7 @@ exports.addFlower = async (req, res) => {
       });
       await newFlower.save();
       return res.status(200).json({ message: "added flower successfully." });
-    }
-    else{
+    } else {
       return res.status(400).json({ message: "data not found." });
     }
   } catch (error) {
@@ -314,18 +287,17 @@ exports.addFlower = async (req, res) => {
   }
 };
 
-exports.getFlower=async (req,res)=>{
+exports.getFlower = async (req, res) => {
   try {
-    const flowers=await Flower.find()
-  return res.status(200).json({ message: "fetched successfully.",flowers });
+    const flowers = await Flower.find();
+    return res.status(200).json({ message: "fetched successfully.", flowers });
   } catch (error) {
     console.error("fetching Error:", error);
     return res
       .status(500)
       .json({ message: "Server error while fetching flower." });
-
   }
-}
+};
 
 exports.updateFlower = async (req, res) => {
   const { id } = req.params;
@@ -366,56 +338,69 @@ exports.deleteFlower = async (req, res) => {
       return res.status(404).json({ message: "Flower not found" });
     }
 
-    res.status(200).json({ message: "Flower deleted successfully", deletedFlower });
+    res
+      .status(200)
+      .json({ message: "Flower deleted successfully", deletedFlower });
   } catch (error) {
     console.error("Error deleting flower:", error);
     res.status(500).json({ message: "Server error while deleting flower" });
   }
 };
 
+// cart
 
 exports.addToCart = async (req, res) => {
-  const userId = req.userId;
-  const { id, name, price, quantity, image } = req.body;
-
   try {
-    const existing = await Cart.findOne({ userId, productId: id });
+    const { flowerId, name, image, price, quantity, stock } = req.body;
+    const userId = req.userId;
+
+    if (!flowerId || !name || !image || !price || !quantity || !stock) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    // Check if the item already exists
+    const existing = await Cart.findOne({ userId, flowerId });
 
     if (existing) {
       existing.quantity += quantity;
       await existing.save();
-      return res.status(200).json({ message: "Cart updated", cartItem: existing });
+      return res.status(200).json({ message: "Cart updated", cart: existing });
     }
 
-    const newItem = new Cart({
+    const newCartItem = new Cart({
       userId,
-      productId: id,
+      flowerId,
       name,
-      price,
       image,
+      price,
       quantity,
+      stock,
     });
 
-    await newItem.save();
-    res.status(201).json({ message: "Added to cart", cartItem: newItem });
+    await newCartItem.save();
+    return res
+      .status(201)
+      .json({ message: "Added to cart", cart: newCartItem });
   } catch (error) {
-    res.status(500).json({ message: "Failed to add to cart", error });
+    console.error("Cart error:", error.message);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
-// Get cart items
 exports.getCart = async (req, res) => {
   const userId = req.userId;
   try {
     const items = await Cart.find({ userId });
 
-    const itemsWithStock = await Promise.all(items.map(async (item) => {
-      const flower = await Flower.findById(item.productId);
-      return {
-        ...item._doc,
-        stock: flower?.stock || 0,
-      };
-    }));
+    const itemsWithStock = await Promise.all(
+      items.map(async (item) => {
+        const flower = await Flower.findById(item.flowerId);
+        return {
+          ...item._doc,
+          stock: flower?.stock || 0,
+        };
+      })
+    );
 
     res.status(200).json(itemsWithStock);
   } catch (error) {
@@ -423,9 +408,8 @@ exports.getCart = async (req, res) => {
   }
 };
 
-// Update quantity
 exports.updateCartItem = async (req, res) => {
-  const { id } = req.params;
+  const { id } = req.params; // id = Cart _id
   const { quantity } = req.body;
 
   try {
@@ -441,7 +425,6 @@ exports.updateCartItem = async (req, res) => {
   }
 };
 
-// Remove item
 exports.removeCartItem = async (req, res) => {
   const { id } = req.params;
 
