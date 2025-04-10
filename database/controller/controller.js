@@ -7,6 +7,12 @@ const Wishlist = require("../schema/wishListSchema");
 const Order = require("../schema/orderSchema");
 const Cart = require("../schema/cartSchema");
 const Flower = require("../schema/flowerSchema");
+const Admin = require("../schema/adminSchema");
+// payment gateway
+// const razorpayInstance=new razorpay({
+//   key_id:process.env.RAZORPAY_KEY_ID,
+//   key_secret:process.env.RAZORPAY_KEY_SECRET
+// })
 exports.loginUser = async (req, res) => {
   try {
     console.log("Received Login Request:", req.body); // Debugging log
@@ -255,6 +261,15 @@ exports.deleteOrder = async (req, res) => {
   }
 };
 
+// razorpay order
+// exports.placeOrderRazorPay=async(req,res)=>{
+// try {
+
+// } catch (error) {
+
+// }
+// }
+
 // from admin flowers added,updated and deleted
 exports.addFlower = async (req, res) => {
   const formData = req.body;
@@ -452,24 +467,31 @@ exports.logoutUser = async (req, res) => {
 
 // admin
 exports.loginAdmin = async (req, res) => {
+  const { email, password } = req.body;
   try {
-    const { email, password } = req.body;
-    const admin = await Admin.findOne({ email });
-    if (!admin) return res.status(401).json({ message: "Invalid credentials" });
-
-    const isMatch = await bcrypt.compare(password, admin.password);
-    if (!isMatch)
-      return res.status(401).json({ message: "Invalid credentials" });
-
-    const token = jwt.sign(
-      { id: admin._id, role: "admin" },
-      process.env.JWT_SECRET,
-      {
-        expiresIn: "1d",
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password required" });
+    } else {
+      const admin = await Admin.findOne({ email });
+      if (!admin) {
+        return res
+          .status(404)
+          .json({ message: "no matching data found in database" });
+      } else {
+        if (password !== admin.password) {
+          return res.status(401).json({ message: "Invalid credentials" });
+        } else {
+          const token = jwt.sign(
+            { id: admin._id, role: "admin" },
+            process.env.JWT_SECRET,
+            {
+              expiresIn: "1d",
+            }
+          );
+          res.status(200).json({ message:"admin logged in",token, adminId: admin._id });
+        }
       }
-    );
-
-    res.status(200).json({ token, adminId: admin._id });
+    }
   } catch (err) {
     res.status(500).json({ message: "Login failed", err });
   }
